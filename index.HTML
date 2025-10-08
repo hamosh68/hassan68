@@ -237,7 +237,25 @@
         }
     </style>
 </head>
-<body>
+<body style="display: none;">
+    // ** كلمة المرور السرية - قم بتغيير هذه القيمة **
+    const correctPassword = "251968@Asd"; 
+
+    // طلب كلمة المرور
+    let enteredPassword = prompt("الرجاء إدخال كلمة المرور للوصول إلى بيانات التكاليف:");
+
+    // التحقق من كلمة المرور
+    if (enteredPassword !== correctPassword) {
+        // كلمة المرور خاطئة: إظهار رسالة خطأ وإيقاف عرض الصفحة
+        alert("كلمة المرور خاطئة! لا يمكن الوصول إلى الصفحة.");
+        document.body.style.display = 'none';
+        
+        // يُفضل إضافة هذا السطر لمنع أي سكريبت آخر من العمل في الخلفية
+        throw new Error("Access Denied");
+    } else {
+        // كلمة المرور صحيحة: إظهار المحتوى بالكامل
+        document.body.style.display = ''; 
+    }
     <div class="auto-save-indicator" id="autoSaveIndicator">
         <i class="bi bi-check-circle me-1"></i>تم الحفظ تلقائياً
     </div>
