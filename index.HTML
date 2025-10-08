@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة وتجديد الوثائق الشامل</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #2c3e50;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --info: #17a2b8; /* من ملف السيارات */
+            --purple: #6f42c1; /* من ملف الوثائق */
+        }
+        
+        body {
+            font-family: 'Tajawal', 'Arial', sans-serif; /* دمج الخطوط */
+            background-color: #f8f9fa;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .document-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 25px;
+            max-width: 1200px;
+            margin: auto;
+        }
+        
+        /* شارات الألوان */
+        .badge-expiry { background-color: var(--warning); color: white; }
+        .badge-passport { background-color: var(--success); color: white; }
+        .badge-document { background-color: var(--purple); color: white; }
+        .badge-vehicle { background-color: var(--info); color: white; }
+        .badge-expired { background-color: var(--danger); color: white; }
+
+        /* تفاصيل التكلفة */
+        .cost-details {
+            background-color: #f8ffef; /* تغيير خفيف ليتم تمييزه */
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        /* ملاحظات الأقسام المختلفة */
+        .employee-notes { background-color: #fff9e6; border-left: 3px solid var(--warning); padding: 10px; margin-top: 10px; font-size: 0.9rem; }
+        .document-notes { background-color: #f5f0ff; border-left: 3px solid var(--purple); padding: 10px; margin-top: 10px; font-size: 0.9rem; }
+        .vehicle-notes { background-color: #e6f7ff; border-left: 3px solid var(--info); padding: 10px; margin-top: 10px; font-size: 0.9rem; }
+        
+        /* أنماط الطباعة والتحديد */
+        .print-checkbox { transform: scale(1.2); margin-left: 8px; }
+        .employee-card, .document-card, .vehicle-card { transition: all 0.3s ease; }
+        .employee-card.selected-for-print, .document-card.selected-for-print, .vehicle-card.selected-for-print {
+            border: 2px solid var(--primary);
+            background-color: #f0f8ff;
+        }
+
+        /* شريط الحفظ التلقائي */
+        .auto-save-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: var(--success);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            display: none;
+            z-index: 1000;
+        }
+
+        /* أقسام الإضافة السريعة */
+        .quick-add-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            padding: 20px;
+            color: white;
+            margin-bottom: 20px;
+        }
+        
+        .quick-add-section .form-control { background: rgba(255,255,255,0.9); border: none; }
+        .quick-add-section .btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; }
+        .quick-add-section .btn:hover { background: rgba(255,255,255,0.3); }
+
+        /* أنماط التبويبات */
+        .nav-tabs .nav-link.active {
+            font-weight: bold;
+            background-color: white;
+            border-bottom: 3px solid var(--primary);
+        }
+        
+        .tab-content { padding: 20px 0; }
+        
+        /* أنماط النموذج البسيط (ملف انتهاء تجديد الاقامات.html) */
+        .request-type-title { color: #1e88e5; font-weight: 700; font-size: 1.5rem; margin-bottom: 15px; }
+        .form-select-custom { border: 2px solid #1e88e5; border-radius: 5px; padding: 8px 15px; font-size: 1rem; width: 100%; max-width: 500px; font-family: 'Tajawal', sans-serif; background-color: #f5fbff; }
+        .form-control-custom { border: none; border-bottom: 1px solid #333; border-radius: 0; padding: 5px 0; font-size: 1rem; width: 100%; background-color: transparent; font-family: 'Tajawal', sans-serif; }
+        .amount-input { width: 100px; display: inline-block; text-align: left; }
+        .english-translation { font-size: 0.85rem; color: #546e7a; display: block; margin-top: 2px; }
+
+        /* ========================================================= */
+        /* أنماط الطباعة الموحدة (المعدلة)            */
+        /* ========================================================= */
+        @media print {
+            @page { 
+                size: A4; 
+                margin: 10mm; /* تقليل الهوامش الخارجية للورقة */
+            }
+            body { 
+                background-color: white; 
+                padding: 0; 
+                font-size: 10pt; /* تصغير حجم الخط العام */
+            }
+            .document-container { 
+                box-shadow: none; 
+                padding: 0; 
+                width: 100%; 
+                max-width: 100%; 
+                margin-top: 0;
+            }
+            
+            /* إخفاء عناصر التحكم والتنقل */
+            .no-print, .nav-tabs, .print-controls, .auto-save-indicator, .quick-add-section { 
+                display: none !important; 
+            }
+            
+            /* تقليل المسافة في الرأس */
+            .header {
+                margin-bottom: 10px !important;
+                padding-bottom: 5px;
+            }
+            .header h2 { font-size: 1.2rem !important; }
+            
+            /* إخفاء جميع التبويبات إلا التبويب النشط */
+            .tab-content > .tab-pane {
+                display: none !important;
+                opacity: 0 !important;
+            }
+
+            /* إظهار التبويب النشط */
+            .tab-content > .tab-pane.active,
+            .tab-content > .tab-pane.show {
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+            }
+
+            /* ------------------------------------- */
+            /* ضغط عناصر القوائم (الإقامات، الوثائق، السيارات) */
+            /* ------------------------------------- */
+            .employee-card, .document-card, .vehicle-card {
+                /* إظهار المحدد فقط */
+                display: none !important; 
+                page-break-inside: avoid;
+                border: 1px solid #ddd !important;
+                background-color: white !important;
+                margin-bottom: 5px !important; /* تقليل المسافة بين العناصر */
+            }
+            
+            .employee-card.print-selected, 
+            .document-card.print-selected, 
+            .vehicle-card.print-selected,
+            /* إظهار كل شيء في التبويب النشط عند الطباعة العادية (Window.print) */
+            .tab-pane.active .employee-card,
+            .tab-pane.active .document-card,
+            .tab-pane.active .vehicle-card {
+                display: block !important;
+            }
+            
+            .card-body {
+                padding: 8px !important; /* تقليل الحشو الداخلي للبطاقة */
+            }
+            .card-body .row .col-md-5, 
+            .card-body .row .col-md-7 {
+                padding-top: 3px !important;
+                padding-bottom: 3px !important;
+            }
+            .card-body p, .card-body h5 {
+                margin-bottom: 2px !important; /* تقليل المسافات داخل البطاقة */
+                font-size: 0.85rem;
+            }
+            .employee-notes, .document-notes, .vehicle-notes {
+                padding: 5px !important; /* ضغط قسم الملاحظات */
+                margin-top: 5px !important;
+                font-size: 0.75rem;
+            }
+            
+            /* ------------------------------------- */
+            /* ضغط قسم تفاصيل التكاليف */
+            /* ------------------------------------- */
+            .cost-details {
+                padding: 10px !important;
+                margin-top: 10px !important;
+                page-break-before: avoid;
+            }
+            .cost-details h5 {
+                font-size: 1rem;
+            }
+            .table-bordered th, .table-bordered td {
+                padding: 3px !important;
+                font-size: 0.9rem;
+            }
+            
+            /* ------------------------------------- */
+            /* ضغط النموذج الفردي (التبويب الرابع) */
+            /* ------------------------------------- */
+            #residency-form .form-section-container {
+                padding: 0;
+                margin: 10px auto !important;
+                max-width: 100% !important;
+            }
+            .form-section-container h5 {
+                margin-top: 10px !important;
+                margin-bottom: 5px !important;
+                font-size: 1rem;
+            }
+            .form-control-custom, .form-select-custom, .amount-input, .input-group-text, .form-label {
+                padding: 2px 0 !important;
+                font-size: 0.9rem !important;
+                margin-bottom: 0 !important;
+            }
+            .input-group { margin-bottom: 5px !important; }
+            .english-translation { display: none !important; }
+            .signature-section { 
+                margin-top: 20px !important; 
+                padding-top: 10px !important;
+            }
+            .signature-section p { font-size: 0.9rem; margin-bottom: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="auto-save-indicator" id="autoSaveIndicator">
+        <i class="bi bi-check-circle me-1"></i>تم الحفظ تلقائياً
+    </div>
+
+    <div class="document-container">
+        <div class="header text-center mb-4">
+            <img src="https://via.placeholder.com/150x80/3498db/ffffff?text=شعار+الشركة" alt="شعار الشركة" class="mb-3" style="max-height: 80px;">
+            <h2 class="text-primary">نظام إدارة وتجديد الوثائق الشامل</h2>
+            <p class="text-muted">تاريخ: <span id="currentDate"></span></p>
+        </div>
+
+        <ul class="nav nav-tabs no-print" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="residency-list-tab" data-bs-toggle="tab" data-bs-target="#residency-list" type="button" role="tab" aria-controls="residency-list" aria-selected="true">قائمة تجديد الإقامات</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="documents-tab" data-bs-toggle="tab" data-bs-target="#documents" type="button" role="tab" aria-controls="documents" aria-selected="false">قائمة تجديد الوثائق</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="vehicles-tab" data-bs-toggle="tab" data-bs-target="#vehicles" type="button" role="tab" aria-controls="vehicles" aria-selected="false">قائمة تجديد السيارات</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="residency-form-tab" data-bs-toggle="tab" data-bs-target="#residency-form" type="button" role="tab" aria-controls="residency-form" aria-selected="false">نموذج طلب الإقامة الفردي</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="mainTabContent">
+            
+            <div class="tab-pane fade show active" id="residency-list" role="tabpanel" aria-labelledby="residency-list-tab">
+                <h3 class="mt-4 mb-3 text-secondary">قائمة الموظفين لطلب تجديد الإقامة والجوازات</h3>
+
+                <div class="quick-add-section no-print">
+                    <h5 class="text-white mb-3"><i class="bi bi-lightning-fill me-2"></i>إضافة موظف سريعة</h5>
+                    <div class="row g-2">
+                        <div class="col-md-3"><input type="text" class="form-control" id="quickName" placeholder="اسم الموظف"></div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="quickCompany">
+                                <option value="شركة مركز الأعمال الدولي">مركز الأعمال</option>
+                                <option value="شركة مركز المشاريع">مركز المشاريع</option>
+                                <option value="ستابيلو">ستابيلو</option>
+                                <option value="الطيار">الطيار</option>
+                                <option value="كفالة خاصة">كفالة خاصة</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2"><input type="date" class="form-control" id="quickResidency" placeholder="انتهاء الإقامة"></div>
+                        <div class="col-md-2"><input type="date" class="form-control" id="quickPassport" placeholder="انتهاء الجواز"></div>
+                        <div class="col-md-1">
+                            <select class="form-select" id="quickPeriod">
+                                <option value="1 سنة">1 سنة</option>
+                                <option value="2 سنوات">2 سنوات</option>
+                                <option value="3 سنوات">3 سنوات</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1"><input type="number" step="0.001" class="form-control" id="quickCost" placeholder="التكلفة"></div>
+                        <div class="col-md-1">
+                            <button class="btn btn-light w-100" onclick="quickAddEmployee()">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4 no-print">
+                    <button class="btn btn-sm btn-primary" onclick="addEmployeeRow()">
+                        <i class="bi bi-plus"></i> إضافة موظف (نموذج كامل)
+                    </button>
+                    <button class="btn btn-sm btn-danger ms-2" onclick="clearAllData('employee')">
+                        <i class="bi bi-trash"></i> مسح بيانات الإقامات
+                    </button>
+                    <button class="btn btn-sm btn-warning ms-2" onclick="selectAllForPrint('employee')">
+                        <i class="bi bi-check-all"></i> تحديد الكل للطباعة
+                    </button>
+                    <button class="btn btn-sm btn-secondary ms-2" onclick="deselectAllForPrint('employee')">
+                        <i class="bi bi-x-circle"></i> إلغاء تحديد الكل
+                    </button>
+                    <span class="text-muted ms-3" id="lastSaveTimeEmployee"></span>
+                </div>
+
+                <div id="employeesList">
+                    </div>
+
+                <div class="cost-details">
+                    <h5 class="mb-3">تفصيل تكاليف تجديد الإقامات:</h5>
+                    <table class="table table-bordered table-sm">
+                        <thead>
+                            <tr>
+                                <th width="60%">البند</th>
+                                <th>المبلغ (دينار)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>الضمان الصحي</td>
+                                <td><input type="number" class="form-control form-control-sm border-0 health-insurance" value="0"></td>
+                            </tr>
+                            <tr>
+                                <td>رسوم الشؤون</td>
+                                <td><input type="number" class="form-control form-control-sm border-0 affairs-fees" value="0"></td>
+                            </tr>
+                            <tr>
+                                <td>رسوم الجوازات</td>
+                                <td><input type="number" class="form-control form-control-sm border-0 passport-fees" value="0"></td>
+                            </tr>
+                            <tr>
+                                <td>رسوم أخرى</td>
+                                <td><input type="number" class="form-control form-control-sm border-0 other-fees" value="0"></td>
+                            </tr>
+                            <tr class="table-secondary fw-bold">
+                                <td>الإجمالي (تفصيل التكاليف فقط)</td>
+                                <td id="totalCostDetailsEmployee">0.000</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="documents" role="tabpanel" aria-labelledby="documents-tab">
+                <h3 class="mt-4 mb-3 text-secondary">قائمة الوثائق لطلب التجديد</h3>
+
+                <div class="quick-add-section no-print">
+                    <h5 class="text-white mb-3"><i class="bi bi-lightning-fill me-2"></i>إضافة وثيقة سريعة</h5>
+                    <div class="row g-2">
+                        <div class="col-md-3"><input type="text" class="form-control" id="quickDocName" placeholder="اسم الوثيقة"></div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="quickDocCompany">
+                                <option value="شركة مركز الأعمال الدولي">مركز الأعمال</option>
+                                <option value="شركة مركز المشاريع">مركز المشاريع</option>
+                                <option value="ستابيلو">ستابيلو</option>
+                                <option value="الطيار">الطيار</option>
+                                <option value="خاص">خاص</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2"><input type="date" class="form-control" id="quickDocExpiry" placeholder="انتهاء الوثيقة"></div>
+                        <div class="col-md-2"><input type="number" step="0.001" class="form-control" id="quickDocCost" placeholder="التكلفة"></div>
+                        <div class="col-md-2"><input type="text" class="form-control" id="quickDocNotes" placeholder="ملاحظات"></div>
+                        <div class="col-md-1">
+                            <button class="btn btn-light w-100" onclick="quickAddDocument()">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4 no-print">
+                    <button class="btn btn-sm btn-primary" onclick="addDocumentRow()">
+                        <i class="bi bi-plus"></i> إضافة وثيقة (نموذج كامل)
+                    </button>
+                    <button class="btn btn-sm btn-danger ms-2" onclick="clearAllData('document')">
+                        <i class="bi bi-trash"></i> مسح بيانات الوثائق
+                    </button>
+                    <button class="btn btn-sm btn-warning ms-2" onclick="selectAllForPrint('document')">
+                        <i class="bi bi-check-all"></i> تحديد الكل للطباعة
+                    </button>
+                    <button class="btn btn-sm btn-secondary ms-2" onclick="deselectAllForPrint('document')">
+                        <i class="bi bi-x-circle"></i> إلغاء تحديد الكل
+                    </button>
+                    <span class="text-muted ms-3" id="lastSaveTimeDocument"></span>
+                </div>
+
+                <div id="documentsList">
+                    </div>
+
+                <div class="cost-details">
+                    <h5 class="mb-3">تفصيل تكاليف تجديد الوثائق:</h5>
+                    <table class="table table-bordered table-sm">
+                        <thead>
+                            <tr>
+                                <th width="60%">البند</th>
+                                <th>المبلغ (دينار)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>رسوم الوثائق</td>
+                                <td><input type="number" class="form-control form-control-sm border-0 document-fees" value="0"></td>
+                            </tr>
+                            <tr>
+                                <td>رسوم أخرى</td>
+                                <td><input type="number" class="form-control form-control-sm border-0 document-other-fees" value="0"></td>
+                            </tr>
+                            <tr class="table-secondary fw-bold">
+                                <td>إجمالي (تفصيل التكاليف فقط)</td>
+                                <td id="totalCostDetailsDocument">0.000</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="vehicles" role="tabpanel" aria-labelledby="vehicles-tab">
+                <h3 class="mt-4 mb-3 text-secondary">قائمة السيارات لطلب التجديد</h3>
+
+                <div class="quick-add-section no-print">
+                    <h5 class="text-white mb-3"><i class="bi bi-lightning-fill me-2"></i>إضافة سيارة سريعة</h5>
+                    <div class="row g-2">
+                        <div class="col-md-2"><input type="text" class="form-control" id="quickPlateNumber" placeholder="رقم اللوحة"></div>
+                        <div class="col-md-2"><input type="text" class="form-control" id="quickVehicleType" placeholder="نوع السيارة"></div>
+                        <div class="col-md-2"><input type="text" class="form-control" id="quickVehicleOwner" placeholder="المالك"></div>
+                        <div class="col-md-2"><input type="date" class="form-control" id="quickLicenseExpiry" placeholder="انتهاء الرخصة"></div>
+                        <div class="col-md-2"><input type="number" step="0.001" class="form-control" id="quickVehicleCost" placeholder="التكلفة"></div>
+                        <div class="col-md-1">
+                            <button class="btn btn-light w-100" onclick="quickAddVehicle()">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4 no-print">
+                    <button class="btn btn-sm btn-primary" onclick="addVehicleRow()">
+                        <i class="bi bi-plus"></i> إضافة سيارة (نموذج كامل)
+                    </button>
+                    <button class="btn btn-sm btn-danger ms-2" onclick="clearAllData('vehicle')">
+                        <i class="bi bi-trash"></i> مسح بيانات السيارات
+                    </button>
+                    <button class="btn btn-sm btn-warning ms-2" onclick="selectAllForPrint('vehicle')">
+                        <i class="bi bi-check-all"></i> تحديد الكل للطباعة
+                    </button>
+                    <button class="btn btn-sm btn-secondary ms-2" onclick="deselectAllForPrint('vehicle')">
+                        <i class="bi bi-x-circle"></i> إلغاء تحديد الكل
+                    </button>
+                    <span class="text-muted ms-3" id="lastSaveTimeVehicle"></span>
+                </div>
+
+                <div id="vehiclesList">
+                    </div>
+
+                <div class="cost-details">
+                    <h5 class="mb-3">تفصيل تكاليف تجديد السيارات:</h5>
+                    <table class="table table-bordered table-sm">
+                        <thead>
+                            <tr>
+                                <th width="60%">البند</th>
+                                <th>المبلغ (دينار)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>رسوم الرخصة</td>
+                                <td><input type="number" class="form-control form-control-sm border-0 license-fees" value="0"></td>
+                            </tr>
+                            <tr>
+                                <td>رسوم التأمين</td>
+                                <td><input type="number" class="form-control form-control-sm border-0 insurance-fees" value="0"></td>
+                            </tr>
+                            <tr>
+                                <td>رسوم الفحص</td>
+                                <td><input type="number" class="form-control form-control-sm border-0 inspection-fees" value="0"></td>
+                            </tr>
+                            <tr>
+                                <td>رسوم أخرى</td>
+                                <td><input type="number" class="form-control form-control-sm border-0 vehicle-other-fees" value="0"></td>
+                            </tr>
+                            <tr class="table-secondary fw-bold">
+                                <td>إجمالي (تفصيل التكاليف فقط)</td>
+                                <td id="totalCostDetailsVehicle">0.000</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="residency-form" role="tabpanel" aria-labelledby="residency-form-tab">
+                <div class="form-section-container" style="max-width: 800px; margin: 30px auto;">
+                    <div class="header">
+                        <h1 class="request-type-title">نوع الطلب / Request Type</h1>
+                        <div class="form-section">
+                            <select class="form-select-custom" id="requestType">
+                                <option value="">-- اختر نوع الطلب / Select Request Type --</option>
+                                <option value="تجديد إقامة">تجديد إقامة / Residency Renewal</option>
+                                <option value="إصدار إقامة جديدة">إصدار إقامة جديدة / New Residency Issuance</option>
+                                <option value="إلغاء إقامة">إلغاء إقامة / Residency Cancellation</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <h5 class="text-primary mb-3">بيانات الموظف / Employee Details</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6 form-section">
+                            <label class="form-label">اسم الموظف / Employee Name</label>
+                            <input type="text" class="form-control-custom" id="employeeName">
+                        </div>
+                        <div class="col-md-6 form-section">
+                            <label class="form-label">الشركة /company</label>
+                            <input type="text" class="form-control-custom" id="civilID">
+                        </div>
+                        <div class="col-md-6 form-section">
+                            <label class="form-label">ملاحظات  / notes</label>
+                            <input type="text" class="form-control-custom" id="nationality">
+                        </div>
+                        <div class="col-md-6 form-section">
+                            <label class="form-label">انتهاء الإقامة الحالية / Current Residency Expiry</label>
+                            <input type="date" class="form-control-custom" id="currentResidencyExpiry">
+                        </div>
+                    </div>
+
+                    <h5 class="text-primary mt-4 mb-3">التكاليف التقديرية (دينار كويتي) / Estimated Costs (KWD)</h5>
+                    <div class="row g-3">
+                        <div class="col-md-4 form-section">
+                            <label class="form-label">الضمان الصحي / Health Insurance</label>
+                            <div class="input-group">
+                                <span class="input-group-text currency">د.ك</span>
+                                <input type="number" step="0.001" class="form-control amount-input" value="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4 form-section">
+                            <label class="form-label">رسوم الجوازات / Passport Fees</label>
+                            <div class="input-group">
+                                <span class="input-group-text currency">د.ك</span>
+                                <input type="number" step="0.001" class="form-control amount-input" value="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4 form-section">
+                            <label class="form-label">رسوم الشؤون / Work Permit Fees</label>
+                            <div class="input-group">
+                                <span class="input-group-text currency">د.ك</span>
+                                <input type="number" step="0.001" class="form-control amount-input" value="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section text-center no-print">
+                        <button class="btn btn-primary me-2" onclick="calculateFormTotal()">
+                            <i class="bi bi-currency-dollar me-1"></i> حساب الإجمالي / Calculate Total
+                        </button>
+                        <button class="btn btn-danger" onclick="clearSimpleForm()">
+                            <i class="bi bi-trash me-1"></i> مسح النموذج / Clear Form
+                        </button>
+                    </div>
+
+                    <div class="cost-details mt-4">
+                        <h5 class="receipt-title">الإجمالي الكلي للرسوم / Grand Total Fees:</h5>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <input type="text" class="form-control form-control-sm border-0 fw-bold fs-5 text-end" id="totalAmount" readonly value="0.000">
+                            <span class="fs-5 me-2">د.ك</span>
+                        </div>
+                    </div>
+
+                    <div class="signature-section mt-5 pt-3 border-top">
+                        <div class="row text-center">
+                                                       </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            
+        </div>
+
+                   <div class="row">
+                <div class="col-md-6 mb-3">
+                    <p class="mb-1">توقيع المسؤول المالي:</p>
+                    <div class="signature-box" style="height: 60px; border-bottom: 1px solid #333; width: 80%;"></div>
+             
+                <div class="col-md-6 mb-3">
+                    <p class="mb-1">توقيع المدير العام:</p>
+                    <div class="signature-box" style="height: 60px; border-bottom: 1px solid #333; width: 80%;"></div>
+                </div>
+            </div>
+      
+
+        <div class="no-print mt-4 text-center print-controls">
+            <button onclick="printSelectedItems()" class="btn btn-primary me-2">
+                <i class="bi bi-printer"></i> طباعة المحدد فقط (في القوائم)
+            </button>
+            <button onclick="window.print()" class="btn btn-outline-primary me-2">
+                <i class="bi bi-printer-fill"></i> طباعة الصفحة الحالية
+            </button>
+            <button class="btn btn-success" onclick="saveAllData()">
+                <i class="bi bi-save"></i> حفظ جميع البيانات
+            </button>
+            <button class="btn btn-info ms-2" onclick="exportAllData()">
+                <i class="bi bi-download"></i> تصدير جميع البيانات
+            </button>
+            <input type="file" id="importFile" class="d-none" accept=".json" onchange="importAllData(event)">
+            <button class="btn btn-warning ms-2" onclick="document.getElementById('importFile').click()">
+                <i class="bi bi-upload"></i> استيراد بيانات
+            </button>
+        </div>
+    </div>
+
+    <div class="modal fade" id="employeeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="employeeModalTitle">إضافة موظف جديد</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="employeeForm">
+                        <input type="hidden" id="employeeIndex">
+                        <div class="mb-3">
+                            <label for="employeeNameFull" class="form-label">اسم الموظف</label>
+                            <input type="text" class="form-control" id="employeeNameFull" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="employeeCompany" class="form-label">الشركة / الكفالة</label>
+                            <select class="form-select company-select" id="employeeCompany" required>
+                                <option value="شركة مركز الأعمال الدولي">مركز الأعمال</option>
+                                <option value="شركة مركز المشاريع">مركز المشاريع</option>
+                                <option value="ستابيلو">ستابيلو</option>
+                                <option value="الطيار">الطيار</option>
+                                <option value="كفالة خاصة">كفالة خاصة</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="residencyExpiry" class="form-label">تاريخ انتهاء الإقامة</label>
+                            <input type="date" class="form-control" id="residencyExpiry" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="passportExpiry" class="form-label">تاريخ انتهاء الجواز</label>
+                            <input type="date" class="form-control" id="passportExpiry">
+                        </div>
+                        <div class="mb-3">
+                            <label for="renewalPeriod" class="form-label">مدة التجديد المطلوبة</label>
+                            <select class="form-select" id="renewalPeriod">
+                                <option value="1 سنة">1 سنة</option>
+                                <option value="2 سنوات">2 سنوات</option>
+                                <option value="3 سنوات">3 سنوات</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="employeeCost" class="form-label">تكلفة التجديد (تقديري)</label>
+                            <input type="number" step="0.001" class="form-control" id="employeeCost" value="0.000">
+                        </div>
+                        <div class="mb-3">
+                            <label for="employeeNotes" class="form-label">ملاحظات إضافية</label>
+                            <textarea class="form-control" id="employeeNotes" rows="3"></textarea>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                            <button type="button" class="btn btn-primary" onclick="saveEmployee()">حفظ البيانات</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="documentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="documentModalTitle">إضافة وثيقة جديدة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="documentForm">
+                        <input type="hidden" id="documentIndex">
+                        <div class="mb-3">
+                            <label for="documentName" class="form-label">اسم الوثيقة</label>
+                            <input type="text" class="form-control" id="documentName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="documentCompany" class="form-label">جهة الإصدار/الجهة التابعة لها</label>
+                            <select class="form-select company-select" id="documentCompany" required>
+                                <option value="شركة مركز الأعمال الدولي">مركز الأعمال</option>
+                                <option value="شركة مركز المشاريع">مركز المشاريع</option>
+                                <option value="ستابيلو">ستابيلو</option>
+                                <option value="الطيار">الطيار</option>
+                                <option value="خاص">خاص</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="documentExpiry" class="form-label">تاريخ انتهاء الوثيقة</label>
+                            <input type="date" class="form-control" id="documentExpiry" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="documentCost" class="form-label">تكلفة التجديد (تقديري)</label>
+                            <input type="number" step="0.001" class="form-control" id="documentCost" value="0.000">
+                        </div>
+                        <div class="mb-3">
+                            <label for="documentNotes" class="form-label">ملاحظات إضافية</label>
+                            <textarea class="form-control" id="documentNotes" rows="3"></textarea>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                            <button type="button" class="btn btn-primary" onclick="saveDocument()">حفظ البيانات</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="vehicleModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="vehicleModalTitle">إضافة سيارة جديدة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="vehicleForm">
+                        <input type="hidden" id="vehicleIndex">
+                        <div class="mb-3">
+                            <label for="vehiclePlateNumber" class="form-label">رقم اللوحة</label>
+                            <input type="text" class="form-control" id="vehiclePlateNumber" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="vehicleType" class="form-label">نوع السيارة</label>
+                            <input type="text" class="form-control" id="vehicleType" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="vehicleOwner" class="form-label">المالك (اسم الشركة/الشخص)</label>
+                            <input type="text" class="form-control" id="vehicleOwner" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="licenseExpiry" class="form-label">تاريخ انتهاء رخصة السير</label>
+                            <input type="date" class="form-control" id="licenseExpiry" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="vehicleCost" class="form-label">تكلفة التجديد (تقديري)</label>
+                            <input type="number" step="0.001" class="form-control" id="vehicleCost" value="0.000">
+                        </div>
+                        <div class="mb-3">
+                            <label for="vehicleNotes" class="form-label">ملاحظات إضافية</label>
+                            <textarea class="form-control" id="vehicleNotes" rows="3"></textarea>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                            <button type="button" class="btn btn-primary" onclick="saveVehicle()">حفظ البيانات</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // =========================================================
+        //                 Data Structures & Core Logic
+        // =========================================================
+        let employees = [];
+        let documents = [];
+        let vehicles = [];
+
+        const STORAGE_KEYS = {
+            employee: 'renewalDataEmployees',
+            document: 'renewalDataDocuments',
+            vehicle: 'renewalDataVehicles',
+            employeeFees: 'employeeFees',
+            documentFees: 'documentFees',
+            vehicleFees: 'vehicleFees'
+        };
+
+        const DATA_MAP = {
+            employee: { list: employees, listId: 'employeesList', modalId: 'employeeModal', listClass: 'employee-card', timeId: 'lastSaveTimeEmployee', feeInputs: ['.health-insurance', '.affairs-fees', '.passport-fees', '.other-fees'], totalId: 'totalCostDetailsEmployee', feeKey: STORAGE_KEYS.employeeFees },
+            document: { list: documents, listId: 'documentsList', modalId: 'documentModal', listClass: 'document-card', timeId: 'lastSaveTimeDocument', feeInputs: ['.document-fees', '.document-other-fees'], totalId: 'totalCostDetailsDocument', feeKey: STORAGE_KEYS.documentFees },
+            vehicle: { list: vehicles, listId: 'vehiclesList', modalId: 'vehicleModal', listClass: 'vehicle-card', timeId: 'lastSaveTimeVehicle', feeInputs: ['.license-fees', '.insurance-fees', '.inspection-fees', '.vehicle-other-fees'], totalId: 'totalCostDetailsVehicle', feeKey: STORAGE_KEYS.vehicleFees }
+        };
+
+        let autoSaveTimeout;
+        const employeeModal = new bootstrap.Modal(document.getElementById('employeeModal'));
+        const documentModal = new bootstrap.Modal(document.getElementById('documentModal'));
+        const vehicleModal = new bootstrap.Modal(document.getElementById('vehicleModal'));
+
+        // =========================================================
+        //                 Utility Functions
+        // =========================================================
+
+        function formatCost(cost) {
+            return (parseFloat(cost) || 0).toFixed(3);
+        }
+        
+        function getListData(type) {
+            return DATA_MAP[type].list;
+        }
+
+        function updateCurrentDate() {
+            const now = new Date();
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('ar-EG', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+        
+        function showAutoSaveIndicator() {
+            const indicator = document.getElementById('autoSaveIndicator');
+            indicator.style.display = 'block';
+            setTimeout(() => {
+                indicator.style.display = 'none';
+            }, 1500);
+        }
+
+        function autoSave() {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(() => {
+                saveData('employee');
+                saveData('document');
+                saveData('vehicle');
+                showAutoSaveIndicator();
+            }, 500);
+        }
+
+        // =========================================================
+        //                 Data Handling (Save/Load)
+        // =========================================================
+
+        function saveData(type) {
+            const map = DATA_MAP[type];
+            localStorage.setItem(STORAGE_KEYS[type], JSON.stringify(map.list));
+            
+            // Save fees
+            const fees = {};
+            map.feeInputs.forEach(selector => {
+                const input = document.querySelector(selector);
+                if (input) {
+                    fees[selector] = input.value;
+                }
+            });
+            localStorage.setItem(map.feeKey, JSON.stringify(fees));
+
+            document.getElementById(map.timeId).textContent = `آخر حفظ: ${new Date().toLocaleTimeString('ar-EG')}`;
+        }
+        
+        function loadSavedData() {
+            // Load Employees
+            const loadedEmployees = JSON.parse(localStorage.getItem(STORAGE_KEYS.employee)) || [];
+            employees.splice(0, employees.length, ...loadedEmployees);
+            
+            // Load Documents
+            const loadedDocuments = JSON.parse(localStorage.getItem(STORAGE_KEYS.document)) || [];
+            documents.splice(0, documents.length, ...loadedDocuments);
+
+            // Load Vehicles
+            const loadedVehicles = JSON.parse(localStorage.getItem(STORAGE_KEYS.vehicle)) || [];
+            vehicles.splice(0, vehicles.length, ...loadedVehicles);
+
+            // Load Fees for all types
+            ['employee', 'document', 'vehicle'].forEach(type => {
+                const map = DATA_MAP[type];
+                const fees = JSON.parse(localStorage.getItem(map.feeKey)) || {};
+                map.feeInputs.forEach(selector => {
+                    const input = document.querySelector(selector);
+                    if (input && fees[selector]) {
+                        input.value = fees[selector];
+                    }
+                });
+            });
+            
+            renderAllLists();
+            calculateAllTotals();
+        }
+        
+        function clearAllData(type) {
+            if (confirm(`هل أنت متأكد من مسح جميع بيانات ${type === 'employee' ? 'الإقامات' : type === 'document' ? 'الوثائق' : 'السيارات'}؟`)) {
+                const map = DATA_MAP[type];
+                map.list.length = 0;
+                localStorage.removeItem(STORAGE_KEYS[type]);
+                localStorage.removeItem(map.feeKey);
+                renderList(type);
+                calculateTotal(type);
+                alert('تم مسح البيانات بنجاح.');
+            }
+        }
+        
+        function saveAllData() {
+            saveData('employee');
+            saveData('document');
+            saveData('vehicle');
+            alert('تم حفظ جميع البيانات بنجاح!');
+        }
+
+        function exportAllData() {
+            const data = {
+                employees: employees,
+                documents: documents,
+                vehicles: vehicles,
+                employeeFees: JSON.parse(localStorage.getItem(STORAGE_KEYS.employeeFees) || '{}'),
+                documentFees: JSON.parse(localStorage.getItem(STORAGE_KEYS.documentFees) || '{}'),
+                vehicleFees: JSON.parse(localStorage.getItem(STORAGE_KEYS.vehicleFees) || '{}'),
+                exportDate: new Date().toISOString()
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 4));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "renewal_data_export_" + new Date().toISOString().slice(0, 10) + ".json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            alert('تم تصدير جميع البيانات بنجاح!');
+        }
+
+        function importAllData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (confirm('هل أنت متأكد من استيراد هذه البيانات؟ سيؤدي هذا إلى مسح البيانات الحالية واستبدالها.')) {
+                        
+                        employees.splice(0, employees.length, ...(importedData.employees || []));
+                        documents.splice(0, documents.length, ...(importedData.documents || []));
+                        vehicles.splice(0, vehicles.length, ...(importedData.vehicles || []));
+
+                        // Load Fees
+                        const feesData = {
+                            employee: importedData.employeeFees || {},
+                            document: importedData.documentFees || {},
+                            vehicle: importedData.vehicleFees || {}
+                        };
+
+                        ['employee', 'document', 'vehicle'].forEach(type => {
+                            const map = DATA_MAP[type];
+                            map.feeInputs.forEach(selector => {
+                                const input = document.querySelector(selector);
+                                if (input && feesData[type][selector]) {
+                                    input.value = feesData[type][selector];
+                                }
+                            });
+                        });
+                        
+                        saveAllData();
+                        renderAllLists();
+                        calculateAllTotals();
+
+                        alert('تم استيراد جميع البيانات بنجاح!');
+                    }
+                } catch (error) {
+                    alert('خطأ في استيراد الملف. تأكد من أن الملف بصيغة JSON صحيحة.');
+                    console.error('Import error:', error);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // =========================================================
+        //                 Rendering and Printing
+        // =========================================================
+
+        function getExpiryBadge(expiryDate, docType) {
+            if (!expiryDate) return '';
+            const today = new Date();
+            const expiry = new Date(expiryDate);
+            const diffTime = expiry.getTime() - today.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            let badgeClass = 'badge-secondary';
+            let badgeText = `ينتهي في ${expiryDate}`;
+
+            if (diffDays <= 0) {
+                badgeClass = 'badge-expired';
+                badgeText = 'منتهي!';
+            } else if (diffDays <= 90) { // 3 months warning
+                badgeClass = 'badge-expiry';
+                badgeText = `قريب الانتهاء (${diffDays} يوم)`;
+            } else {
+                badgeClass = docType === 'employee' ? 'badge-passport' : docType === 'document' ? 'badge-document' : 'badge-vehicle';
+                badgeText = `صالح لـ ${Math.floor(diffDays / 30)} شهر`;
+            }
+
+            return `<span class="badge ${badgeClass}">${badgeText}</span>`;
+        }
+
+        function renderEmployee(employee, index) {
+            const isSelected = employee.printSelected ? 'selected-for-print print-selected' : '';
+            return `
+                <div class="employee-card card mb-3 ${isSelected}" data-index="${index}">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-5">
+                                <h5 class="mb-1 text-primary"><i class="bi bi-person-fill me-2"></i>${employee.name}</h5>
+                                <p class="mb-0 text-muted">${employee.company}</p>
+                            </div>
+                            <div class="col-md-7">
+                                <div class="d-flex flex-wrap align-items-center justify-content-end">
+                                    <div class="me-3 mb-2 mb-md-0">
+                                        <p class="mb-0 fw-bold">انتهاء الإقامة: ${getExpiryBadge(employee.residencyExpiry, 'employee')}</p>
+                                        <p class="mb-0 text-muted small">انتهاء الجواز: ${getExpiryBadge(employee.passportExpiry, 'employee')}</p>
+                                    </div>
+                                    <div class="me-3 mb-2 mb-md-0">
+                                        <p class="mb-0 text-success fw-bold">التكلفة: ${formatCost(employee.cost)} د.ك</p>
+                                        <p class="mb-0 text-secondary small">المدة: ${employee.period}</p>
+                                    </div>
+                                    <div class="no-print">
+                                        <input type="checkbox" class="print-checkbox form-check-input me-2" ${employee.printSelected ? 'checked' : ''} onclick="togglePrintSelection('employee', ${index})">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editEmployee(${index})"><i class="bi bi-pencil"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteItem('employee', ${index})"><i class="bi bi-trash"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        ${employee.notes ? `<div class="employee-notes mt-2"><i class="bi bi-info-circle-fill me-2"></i>ملاحظات: ${employee.notes}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderDocument(doc, index) {
+            const isSelected = doc.printSelected ? 'selected-for-print print-selected' : '';
+            return `
+                <div class="document-card card mb-3 ${isSelected}" data-index="${index}">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-5">
+                                <h5 class="mb-1 text-purple"><i class="bi bi-file-earmark-fill me-2"></i>${doc.name}</h5>
+                                <p class="mb-0 text-muted">${doc.company}</p>
+                            </div>
+                            <div class="col-md-7">
+                                <div class="d-flex flex-wrap align-items-center justify-content-end">
+                                    <div class="me-3 mb-2 mb-md-0">
+                                        <p class="mb-0 fw-bold">انتهاء الوثيقة: ${getExpiryBadge(doc.expiry, 'document')}</p>
+                                    </div>
+                                    <div class="me-3 mb-2 mb-md-0">
+                                        <p class="mb-0 text-success fw-bold">التكلفة: ${formatCost(doc.cost)} د.ك</p>
+                                    </div>
+                                    <div class="no-print">
+                                        <input type="checkbox" class="print-checkbox form-check-input me-2" ${doc.printSelected ? 'checked' : ''} onclick="togglePrintSelection('document', ${index})">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editDocument(${index})"><i class="bi bi-pencil"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteItem('document', ${index})"><i class="bi bi-trash"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        ${doc.notes ? `<div class="document-notes mt-2"><i class="bi bi-info-circle-fill me-2"></i>ملاحظات: ${doc.notes}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderVehicle(vehicle, index) {
+            const isSelected = vehicle.printSelected ? 'selected-for-print print-selected' : '';
+            return `
+                <div class="vehicle-card card mb-3 ${isSelected}" data-index="${index}">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-5">
+                                <h5 class="mb-1 text-info"><i class="bi bi-truck-flatbed me-2"></i>${vehicle.plateNumber} (${vehicle.vehicleType})</h5>
+                                <p class="mb-0 text-muted">المالك: ${vehicle.owner}</p>
+                            </div>
+                            <div class="col-md-7">
+                                <div class="d-flex flex-wrap align-items-center justify-content-end">
+                                    <div class="me-3 mb-2 mb-md-0">
+                                        <p class="mb-0 fw-bold">انتهاء الرخصة: ${getExpiryBadge(vehicle.licenseExpiry, 'vehicle')}</p>
+                                    </div>
+                                    <div class="me-3 mb-2 mb-md-0">
+                                        <p class="mb-0 text-success fw-bold">التكلفة: ${formatCost(vehicle.cost)} د.ك</p>
+                                    </div>
+                                    <div class="no-print">
+                                        <input type="checkbox" class="print-checkbox form-check-input me-2" ${vehicle.printSelected ? 'checked' : ''} onclick="togglePrintSelection('vehicle', ${index})">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editVehicle(${index})"><i class="bi bi-pencil"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteItem('vehicle', ${index})"><i class="bi bi-trash"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        ${vehicle.notes ? `<div class="vehicle-notes mt-2"><i class="bi bi-info-circle-fill me-2"></i>ملاحظات: ${vehicle.notes}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderList(type) {
+            const map = DATA_MAP[type];
+            const renderer = type === 'employee' ? renderEmployee : type === 'document' ? renderDocument : renderVehicle;
+            const listHtml = map.list.map(renderer).join('');
+            document.getElementById(map.listId).innerHTML = listHtml;
+            calculateTotal(type);
+        }
+        
+        function renderAllLists() {
+            renderList('employee');
+            renderList('document');
+            renderList('vehicle');
+        }
+
+        function togglePrintSelection(type, index) {
+            const list = getListData(type);
+            list[index].printSelected = !list[index].printSelected;
+            saveData(type);
+            renderList(type); // Re-render to update the class
+        }
+
+        function selectAllForPrint(type) {
+            getListData(type).forEach(item => item.printSelected = true);
+            saveData(type);
+            renderList(type);
+        }
+
+        function deselectAllForPrint(type) {
+            getListData(type).forEach(item => item.printSelected = false);
+            saveData(type);
+            renderList(type);
+        }
+
+        function printSelectedItems() {
+            const activeTabId = document.querySelector('.tab-pane.active').id;
+            const type = activeTabId === 'residency-list' ? 'employee' : 
+                         activeTabId === 'documents' ? 'document' : 
+                         activeTabId === 'vehicles' ? 'vehicle' : 'none';
+
+            if (type === 'none') {
+                // If the active tab is the single form, just print the active page normally
+                window.print();
+                return;
+            }
+
+            // For list views, we want to hide unselected items during print
+            const list = getListData(type);
+            let hasSelected = false;
+            list.forEach(item => {
+                if (item.printSelected) {
+                    hasSelected = true;
+                }
+            });
+
+            if (!hasSelected) {
+                 alert('الرجاء تحديد موظف واحد على الأقل للطباعة.');
+                 return;
+            }
+
+            // Temporarily add a class to distinguish between normal print and printSelectedItems print if needed
+            // However, the CSS is now smarter and relies on the print-selected class on the item itself.
+            window.print();
+        }
+
+        // =========================================================
+        //                 Crud Operations (General)
+        // =========================================================
+
+        function deleteItem(type, index) {
+            if (confirm(`هل أنت متأكد من حذف هذا البند من قائمة ${type === 'employee' ? 'الإقامات' : type === 'document' ? 'الوثائق' : 'السيارات'}؟`)) {
+                const list = getListData(type);
+                list.splice(index, 1);
+                renderList(type);
+                saveData(type);
+            }
+        }
+
+        // =========================================================
+        //                 Total Calculation
+        // =========================================================
+
+        function calculateTotal(type) {
+            const map = DATA_MAP[type];
+            
+            // Sum of fees in the cost-details table ONLY
+            let feesTotal = 0;
+            map.feeInputs.forEach(selector => {
+                const input = document.querySelector(selector);
+                feesTotal += parseFloat(input?.value) || 0;
+            });
+            
+            const total = feesTotal; 
+            
+            document.getElementById(map.totalId).textContent = formatCost(total);
+        }
+        
+        function calculateAllTotals() {
+            calculateTotal('employee');
+            calculateTotal('document');
+            calculateTotal('vehicle');
+        }
+
+
+        // =========================================================
+        //                 Employee (Residency) Specific Logic
+        // =========================================================
+
+        function addEmployeeRow() {
+            document.getElementById('employeeModalTitle').textContent = 'إضافة موظف جديد';
+            document.getElementById('employeeIndex').value = '';
+            document.getElementById('employeeForm').reset();
+            document.getElementById('employeeCost').value = '0.000';
+            employeeModal.show();
+        }
+
+        function quickAddEmployee() {
+            const name = document.getElementById('quickName').value.trim();
+            const company = document.getElementById('quickCompany').value;
+            const residencyExpiry = document.getElementById('quickResidency').value;
+            const passportExpiry = document.getElementById('quickPassport').value;
+            const period = document.getElementById('quickPeriod').value;
+            const cost = document.getElementById('quickCost').value;
+
+            if (name && residencyExpiry) {
+                employees.push({
+                    name, company, residencyExpiry, passportExpiry, period, 
+                    cost: formatCost(cost), 
+                    notes: '', 
+                    printSelected: true 
+                });
+                document.getElementById('quickName').value = '';
+                document.getElementById('quickResidency').value = '';
+                document.getElementById('quickPassport').value = '';
+                document.getElementById('quickCost').value = '';
+                
+                renderList('employee');
+                saveData('employee');
+            } else {
+                alert('الرجاء إدخال اسم الموظف وتاريخ انتهاء الإقامة.');
+            }
+        }
+
+        function editEmployee(index) {
+            const employee = employees[index];
+            document.getElementById('employeeModalTitle').textContent = 'تعديل بيانات الموظف';
+            document.getElementById('employeeIndex').value = index;
+            document.getElementById('employeeNameFull').value = employee.name;
+            document.getElementById('employeeCompany').value = employee.company;
+            document.getElementById('residencyExpiry').value = employee.residencyExpiry;
+            document.getElementById('passportExpiry').value = employee.passportExpiry;
+            document.getElementById('renewalPeriod').value = employee.period;
+            document.getElementById('employeeCost').value = employee.cost;
+            document.getElementById('employeeNotes').value = employee.notes;
+            employeeModal.show();
+        }
+
+        function saveEmployee() {
+            const index = document.getElementById('employeeIndex').value;
+            const name = document.getElementById('employeeNameFull').value.trim();
+            const company = document.getElementById('employeeCompany').value;
+            const residencyExpiry = document.getElementById('residencyExpiry').value;
+            const passportExpiry = document.getElementById('passportExpiry').value;
+            const period = document.getElementById('renewalPeriod').value;
+            const cost = document.getElementById('employeeCost').value;
+            const notes = document.getElementById('employeeNotes').value.trim();
+
+            if (!name || !residencyExpiry) {
+                alert('الرجاء تعبئة الحقول المطلوبة (الاسم وتاريخ انتهاء الإقامة).');
+                return;
+            }
+
+            const newEmployee = {
+                name, company, residencyExpiry, passportExpiry, period, cost: formatCost(cost), notes, printSelected: true 
+            };
+
+            if (index === '') {
+                employees.push(newEmployee);
+            } else {
+                employees[index] = { ...newEmployee, printSelected: employees[index].printSelected };
+            }
+
+            renderList('employee');
+            saveData('employee');
+            employeeModal.hide();
+        }
+        
+        // =========================================================
+        //                 Document Specific Logic
+        // =========================================================
+        
+        function addDocumentRow() {
+            document.getElementById('documentModalTitle').textContent = 'إضافة وثيقة جديدة';
+            document.getElementById('documentIndex').value = '';
+            document.getElementById('documentForm').reset();
+            document.getElementById('documentCost').value = '0.000';
+            documentModal.show();
+        }
+
+        function quickAddDocument() {
+            const name = document.getElementById('quickDocName').value.trim();
+            const company = document.getElementById('quickDocCompany').value;
+            const expiry = document.getElementById('quickDocExpiry').value;
+            const cost = document.getElementById('quickDocCost').value;
+            const notes = document.getElementById('quickDocNotes').value.trim();
+
+            if (name && expiry) {
+                documents.push({
+                    name, company, expiry, cost: formatCost(cost), notes, printSelected: true
+                });
+                document.getElementById('quickDocName').value = '';
+                document.getElementById('quickDocExpiry').value = '';
+                document.getElementById('quickDocCost').value = '';
+                document.getElementById('quickDocNotes').value = '';
+
+                renderList('document');
+                saveData('document');
+            } else {
+                alert('الرجاء إدخال اسم الوثيقة وتاريخ الانتهاء.');
+            }
+        }
+
+        function editDocument(index) {
+            const doc = documents[index];
+            document.getElementById('documentModalTitle').textContent = 'تعديل بيانات الوثيقة';
+            document.getElementById('documentIndex').value = index;
+            document.getElementById('documentName').value = doc.name;
+            document.getElementById('documentCompany').value = doc.company;
+            document.getElementById('documentExpiry').value = doc.expiry;
+            document.getElementById('documentCost').value = doc.cost;
+            document.getElementById('documentNotes').value = doc.notes;
+            documentModal.show();
+        }
+
+        function saveDocument() {
+            const index = document.getElementById('documentIndex').value;
+            const name = document.getElementById('documentName').value.trim();
+            const company = document.getElementById('documentCompany').value;
+            const expiry = document.getElementById('documentExpiry').value;
+            const cost = document.getElementById('documentCost').value;
+            const notes = document.getElementById('documentNotes').value.trim();
+
+            if (!name || !expiry) {
+                alert('الرجاء تعبئة الحقول المطلوبة (اسم الوثيقة وتاريخ الانتهاء).');
+                return;
+            }
+
+            const newDocument = {
+                name, company, expiry, cost: formatCost(cost), notes, printSelected: true
+            };
+
+            if (index === '') {
+                documents.push(newDocument);
+            } else {
+                documents[index] = { ...newDocument, printSelected: documents[index].printSelected };
+            }
+
+            renderList('document');
+            saveData('document');
+            documentModal.hide();
+        }
+
+        // =========================================================
+        //                 Vehicle Specific Logic
+        // =========================================================
+        
+        function addVehicleRow() {
+            document.getElementById('vehicleModalTitle').textContent = 'إضافة سيارة جديدة';
+            document.getElementById('vehicleIndex').value = '';
+            document.getElementById('vehicleForm').reset();
+            document.getElementById('vehicleCost').value = '0.000';
+            vehicleModal.show();
+        }
+
+        function quickAddVehicle() {
+            const plateNumber = document.getElementById('quickPlateNumber').value.trim();
+            const vehicleType = document.getElementById('quickVehicleType').value.trim();
+            const owner = document.getElementById('quickVehicleOwner').value.trim();
+            const licenseExpiry = document.getElementById('quickLicenseExpiry').value;
+            const cost = document.getElementById('quickVehicleCost').value;
+
+            if (plateNumber && licenseExpiry) {
+                vehicles.push({
+                    plateNumber, vehicleType, owner, licenseExpiry, 
+                    cost: formatCost(cost), 
+                    notes: '', 
+                    printSelected: true
+                });
+                document.getElementById('quickPlateNumber').value = '';
+                document.getElementById('quickVehicleType').value = '';
+                document.getElementById('quickVehicleOwner').value = '';
+                document.getElementById('quickLicenseExpiry').value = '';
+                document.getElementById('quickVehicleCost').value = '';
+                
+                renderList('vehicle');
+                saveData('vehicle');
+            } else {
+                alert('الرجاء إدخال رقم اللوحة وتاريخ انتهاء الرخصة.');
+            }
+        }
+
+        function editVehicle(index) {
+            const vehicle = vehicles[index];
+            document.getElementById('vehicleModalTitle').textContent = 'تعديل بيانات السيارة';
+            document.getElementById('vehicleIndex').value = index;
+            document.getElementById('vehiclePlateNumber').value = vehicle.plateNumber;
+            document.getElementById('vehicleType').value = vehicle.vehicleType;
+            document.getElementById('vehicleOwner').value = vehicle.owner;
+            document.getElementById('licenseExpiry').value = vehicle.licenseExpiry;
+            document.getElementById('vehicleCost').value = vehicle.cost;
+            document.getElementById('vehicleNotes').value = vehicle.notes;
+            vehicleModal.show();
+        }
+
+        function saveVehicle() {
+            const index = document.getElementById('vehicleIndex').value;
+            const plateNumber = document.getElementById('vehiclePlateNumber').value.trim();
+            const vehicleType = document.getElementById('vehicleType').value.trim();
+            const owner = document.getElementById('vehicleOwner').value.trim();
+            const licenseExpiry = document.getElementById('licenseExpiry').value;
+            const cost = document.getElementById('vehicleCost').value;
+            const notes = document.getElementById('vehicleNotes').value.trim();
+
+            if (!plateNumber || !licenseExpiry) {
+                alert('الرجاء تعبئة الحقول المطلوبة (رقم اللوحة وتاريخ انتهاء الرخصة).');
+                return;
+            }
+
+            const newVehicle = {
+                plateNumber, vehicleType, owner, licenseExpiry, cost: formatCost(cost), notes, printSelected: true
+            };
+
+            if (index === '') {
+                vehicles.push(newVehicle);
+            } else {
+                vehicles[index] = { ...newVehicle, printSelected: vehicles[index].printSelected };
+            }
+
+            renderList('vehicle');
+            saveData('vehicle');
+            vehicleModal.hide();
+        }
+
+        // =========================================================
+        //                 Simple Form (File 4) Logic
+        // =========================================================
+
+        function calculateFormTotal() {
+            const amounts = document.querySelectorAll('#residency-form .amount-input');
+            const health = parseFloat(amounts[0]?.value) || 0;
+            const passport = parseFloat(amounts[1]?.value) || 0;
+            const work = parseFloat(amounts[2]?.value) || 0;
+            
+            const total = health + passport + work;
+            document.getElementById('totalAmount').value = total.toFixed(3);
+            
+            alert(`تم حساب المجموع الكلي / Total calculated: ${total.toFixed(3)} دينار كويتي / KWD`);
+        }
+        
+        function clearSimpleForm() {
+            if(confirm('هل أنت متأكد من مسح جميع بيانات النموذج الفردي؟ / Are you sure you want to clear all data?')) {
+                document.querySelectorAll('#residency-form input, #residency-form select').forEach(input => {
+                    if(input.type !== 'checkbox' && input.id !== 'totalAmount') {
+                        input.value = '';
+                    } else if (input.type === 'number') {
+                        input.value = '0.000';
+                    }
+                });
+                document.getElementById('totalAmount').value = '0.000';
+                alert('تم مسح النموذج بنجاح / Form cleared successfully');
+            }
+        }
+
+        // =========================================================
+        //                 Initialization
+        // =========================================================
+
+        // عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCurrentDate();
+            loadSavedData();
+            
+            // تهيئة مستمعي الأحداث لحساب الإجمالي
+            const feeInputs = document.querySelectorAll('.health-insurance, .affairs-fees, .passport-fees, .other-fees, .document-fees, .document-other-fees, .license-fees, .insurance-fees, .inspection-fees, .vehicle-other-fees');
+            feeInputs.forEach(input => {
+                input.addEventListener('input', function(e) {
+                    // تحديد نوع القائمة بناءً على الـ class
+                    let type;
+                    const parent = e.target.closest('.tab-pane');
+                    if (parent.id === 'residency-list') type = 'employee';
+                    else if (parent.id === 'documents') type = 'document';
+                    else if (parent.id === 'vehicles') type = 'vehicle';
+                    
+                    if (type) {
+                        calculateTotal(type);
+                        autoSave();
+                    }
+                });
+            });
+            
+            // مستمعي الإدخال للإضافة السريعة (لتحسين تجربة المستخدم)
+            document.getElementById('quickName')?.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') quickAddEmployee();
+            });
+            document.getElementById('quickDocName')?.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') quickAddDocument();
+            });
+            document.getElementById('quickPlateNumber')?.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') quickAddVehicle();
+            });
+            
+            // مستمعي الإدخال للنموذج البسيط
+            document.querySelectorAll('#residency-form .amount-input').forEach(input => {
+                input.addEventListener('input', () => {
+                    // لا نستخدم autoSave هنا، نعتمد على زر الحساب
+                });
+            });
+            
+            // الحفظ التلقائي كل 30 ثانية
+            setInterval(autoSave, 30000);
+            
+            // تعيين نوع القائمة النشط للطباعة
+            document.getElementById('mainTabs').addEventListener('shown.bs.tab', function (e) {
+                const activeTabId = e.target.getAttribute('data-bs-target');
+                document.body.setAttribute('data-active-tab', activeTabId.substring(1));
+            });
+            document.body.setAttribute('data-active-tab', 'residency-list'); // الافتراضي
+        });
+    </script>
+</body>
+</html>
