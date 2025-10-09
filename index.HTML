@@ -769,24 +769,40 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-       // ******************** كود حماية كلمة المرور ********************
-    // ** 1. قم بتغيير كلمة المرور هنا **
+  // ******************** كود حماية اسم مستخدم وكلمة مرور ********************
+    
+    // ** 1. بيانات الدخول الصحيحة - قم بتغييرها هنا **
+    const correctUsername = "Admin268081001562"; 
     const correctPassword = "251968@Asd"; 
 
-    // 2. طلب كلمة المرور
-    let enteredPassword = prompt("الرجاء إدخال كلمة المرور للوصول إلى بيانات التكاليف:");
+    // 2. طلب اسم المستخدم أولاً
+    let enteredUsername = prompt("الرجاء إدخال اسم المستخدم:");
+    
+    // 3. التحقق من اسم المستخدم
+    if (enteredUsername === correctUsername) {
+        
+        // 4. إذا كان الاسم صحيحاً، اطلب كلمة المرور
+        let enteredPassword = prompt("الرجاء إدخال كلمة المرور:");
 
-    // 3. التحقق
-    if (enteredPassword !== correctPassword) {
-        // كلمة المرور خاطئة: إيقاف كل شيء
-        alert("كلمة المرور خاطئة! لا يمكن الوصول إلى الصفحة.");
-        // لا نحتاج لإخفاء البودي، لأنه مخفي مسبقاً في وسم <body>
-        throw new Error("Access Denied"); // إيقاف تنفيذ بقية سكريبت التطبيق
+        // 5. التحقق من كلمة المرور
+        if (enteredPassword === correctPassword) {
+            
+            // نجاح: إظهار المحتوى (يجب أن يكون وسم <body> مخفياً مسبقاً)
+            document.body.style.display = ''; 
+
+        } else {
+            // كلمة مرور خاطئة
+            alert("كلمة المرور خاطئة! تم إيقاف الوصول.");
+            throw new Error("Access Denied");
+        }
+        
     } else {
-        // كلمة المرور صحيحة: إظهار المحتوى
-        document.body.style.display = ''; 
+        // اسم مستخدم خاطئ
+        alert("اسم المستخدم غير صحيح! تم إيقاف الوصول.");
+        throw new Error("Access Denied");
     }
     // *************************************************************
+    
         let employees = [];
         let documents = [];
         let vehicles = [];
@@ -1536,5 +1552,6 @@
     </script>
 </body>
 </html>
+
 
 
